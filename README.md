@@ -1,2 +1,2 @@
 # Kanshell
-Software for simulate terminal shell.
+Software for simulate terminal shell. ( Computer Science - Operation System )
