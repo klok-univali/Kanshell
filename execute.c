@@ -26,7 +26,7 @@ char *getcwd(char *buf, size_t size);
 void executeCommand(char*);
 void openConsoleShell();
 void getTime(struct timeval*, struct timeval*, long int *, long int *);
-void printTime(struct timeval, struct timeval, struct timeval, struct timeval, struct timespec, struct timespec, long int, long int, long int, long int);
+void printTime(struct timeval, struct timeval, struct timespec, long int, long int);
 void clearScreen();
 
 /**
@@ -56,22 +56,18 @@ int main(int argc, char** argv[]){
  *
  */
 void executeCommand(char* command){
-  struct timeval cpu_s, cpu_e, user_s, user_e;
-  struct timespec clock_s, clock_e;
-  long int interruption_vs, interruption_ve, interruption_is, interruption_ie;
-
-  /* Get start time */
-  getTime(&cpu_s, &user_s, &interruption_vs, &interruption_is);
-  clock_gettime(CLOCK_REALTIME, &clock_s);
+  struct timeval cpu, user;
+  struct timespec clock;
+  long int interruption_v, interruption_i;
 
   system(command);
    
-  /* Get end time */
-  getTime(&cpu_e, &user_e, &interruption_ve, &interruption_ie);
-  clock_gettime(CLOCK_REALTIME, &clock_e);
+  /* Get time */
+  getTime(&cpu, &user, &interruption_v, &interruption_i);
+  clock_gettime(CLOCK_REALTIME, &clock);
 
   /* Calculate and print time */
-  printTime(cpu_s, cpu_e, user_s, user_e, clock_s, clock_e, interruption_vs, interruption_ve, interruption_is, interruption_ie);
+  printTime(cpu, user, clock, interruption_v, interruption_i);
 }
 
 
@@ -91,6 +87,9 @@ void openConsoleShell(){
 
     if(strncmp(command, "exit", 4) == 0){
       break;
+    }else if(strncmp(command, "clear", 5) == 0){
+      clearScreen();
+      continue;
     }
 
     if((pid = fork()) < 0){
@@ -99,10 +98,7 @@ void openConsoleShell(){
     }
 
     if(pid == 0){
-      if(strncmp(command, "clear", 5) == 0){
-        clearScreen();
-        continue;
-      }else if(strncmp(command, "cd ", 3) == 0){
+      if(strncmp(command, "cd ", 3) == 0){
         memcpy(command, &command[3], N);	
         command[(strlen(command)-1)] = '\0';
 
@@ -113,10 +109,10 @@ void openConsoleShell(){
       }
 
       executeCommand(command);
-      strcpy(command, "");
       _exit(0);
     }else{
       wait(NULL);
+      strcpy(command, "");
     }
   }
 }
@@ -127,7 +123,7 @@ void openConsoleShell(){
  */
 void getTime(struct timeval *cpu, struct timeval *user, long int *interruption_v, long int *interruption_i){
   struct rusage usage;
-  getrusage(RUSAGE_SELF, &usage);
+  getrusage(RUSAGE_CHILDREN, &usage);
 
   *cpu = usage.ru_stime;
   *user = usage.ru_utime;
@@ -139,14 +135,15 @@ void getTime(struct timeval *cpu, struct timeval *user, long int *interruption_v
 /**
  *
  */
-void printTime(struct timeval cpu_s, struct timeval cpu_e, struct timeval user_s, struct timeval user_e, struct timespec clock_s, struct timespec clock_e, long int interruption_vs, long int interruption_ve, long int interruption_is, long int interruption_ie){
+void printTime(struct timeval cpu, struct timeval user, struct timespec clock, long int interruption_v, long int interruption_i){
   printf("\n");
-  printf("time CPU: %ld.%lds\n", (cpu_e.tv_sec - cpu_s.tv_sec), (cpu_e.tv_usec - cpu_s.tv_usec));
-  printf("time USER: %ld.%lds\n", (user_e.tv_sec - user_s.tv_sec), (user_e.tv_usec - user_s.tv_usec));
-  printf("wall time: %fs\n", ((double)((clock_e.tv_sec+clock_e.tv_nsec*1e-9)-(double)(clock_s.tv_sec+clock_s.tv_nsec*1e-9))));
+  printf("time CPU: %ld.%lds\n", cpu.tv_sec, cpu.tv_usec);
+  printf("time USER: %ld.%lds\n", user.tv_sec, user.tv_usec);
+  //printf("wall time: %fs\n", ((double)(clock.tv_sec+clock.tv_nsec*1e-9)));
+  printf("wall time: %ld.%lds\n", clock.tv_sec, clock.tv_nsec);
   printf("\n");
-  printf("voluntary interruption: %li\n", (interruption_ve - interruption_vs));
-  printf("involuntary interruption: %li\n", (interruption_ie - interruption_is));
+  printf("voluntary interruption: %li\n", interruption_v);
+  printf("involuntary interruption: %li\n", interruption_i);
 }
 
 
