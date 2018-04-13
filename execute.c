@@ -1,8 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/time.h>
+#include <time.h>
 #include <sys/resource.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 #define N 100
@@ -60,13 +62,13 @@ void executeCommand(char* command){
 
   /* Get start time */
   getTime(&cpu_s, &user_s, &interruption_vs, &interruption_is);
-  clock_gettime(_XOPEN_REALTIME, &clock_s);
+  clock_gettime(CLOCK_REALTIME, &clock_s);
 
   system(command);
    
   /* Get end time */
   getTime(&cpu_e, &user_e, &interruption_ve, &interruption_ie);
-  clock_gettime(_XOPEN_REALTIME, &clock_e);
+  clock_gettime(CLOCK_REALTIME, &clock_e);
 
   /* Calculate and print time */
   printTime(cpu_s, cpu_e, user_s, user_e, clock_s, clock_e, interruption_vs, interruption_ve, interruption_is, interruption_ie);
@@ -79,6 +81,7 @@ void executeCommand(char* command){
 void openConsoleShell(){
   char command[N]; 
   char cwd[1024];
+  pid_t pid;
 
   clearScreen();
 
@@ -88,23 +91,34 @@ void openConsoleShell(){
 
     if(strncmp(command, "exit", 4) == 0){
       break;
-    }else if(strncmp(command, "clear", 5) == 0){
-      clearScreen();
-      continue;
-    }else if(strncmp(command, "cd ", 3) == 0){
-      memcpy(command, &command[3], N);	
-      command[(strlen(command)-1)] = '\0';
-
-      if(chdir(command) != 0){
-        printf("Directory not found!\n");
-      }
-      continue;
     }
 
-    executeCommand(command);
-    strcpy(command, "");
-  }
+    if((pid = fork()) < 0){
+      perror("fork");
+      break;
+    }
 
+    if(pid == 0){
+      if(strncmp(command, "clear", 5) == 0){
+        clearScreen();
+        continue;
+      }else if(strncmp(command, "cd ", 3) == 0){
+        memcpy(command, &command[3], N);	
+        command[(strlen(command)-1)] = '\0';
+
+        if(chdir(command) != 0){
+          printf("Directory not found!\n");
+        }
+        continue;
+      }
+
+      executeCommand(command);
+      strcpy(command, "");
+      _exit(0);
+    }else{
+      wait(NULL);
+    }
+  }
 }
 
 
