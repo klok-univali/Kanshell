@@ -53,13 +53,13 @@ int main(int argc, char** argv[]){
 
 
 /**
- *
+ * @param command is string who contains command for execute.
  */
 void executeCommand(char* command){
   struct timeval cpu, user;
   struct timespec clock;
   long int interruption_v, interruption_i;
-
+  
   system(command);
    
   /* Get time */
@@ -82,6 +82,7 @@ void openConsoleShell(){
   clearScreen();
 
   while(1){
+    strcpy(command, "");
     printf("%% ");
     fgets(command, N, stdin);
 
@@ -111,8 +112,9 @@ void openConsoleShell(){
       executeCommand(command);
       _exit(0);
     }else{
-      wait(NULL);
-      strcpy(command, "");
+      if(command[(strlen(command)-2)] != "&"){
+        wait(NULL);
+      }
     }
   }
 }
@@ -139,8 +141,7 @@ void printTime(struct timeval cpu, struct timeval user, struct timespec clock, l
   printf("\n");
   printf("time CPU: %ld.%lds\n", cpu.tv_sec, cpu.tv_usec);
   printf("time USER: %ld.%lds\n", user.tv_sec, user.tv_usec);
-  //printf("wall time: %fs\n", ((double)(clock.tv_sec+clock.tv_nsec*1e-9)));
-  printf("wall time: %ld.%lds\n", clock.tv_sec, clock.tv_nsec);
+  printf("wall time: %fs\n", ((double)(clock.tv_sec+clock.tv_nsec*1e-9)));
   printf("\n");
   printf("voluntary interruption: %li\n", interruption_v);
   printf("involuntary interruption: %li\n", interruption_i);
